@@ -31,7 +31,7 @@ DEBUG = True
 
 # ALLOWED_HOSTS = ["*"]
 
-ALLOWED_HOSTS = ['ge-py.azurewebsites.net',
+ALLOWED_HOSTS = ['ge-django.azurewebsites.net',
 				 '127.0.0.1',
 				 'localhost',
 				 '10.70.176.158',
