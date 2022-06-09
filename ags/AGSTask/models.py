@@ -80,36 +80,38 @@ def get_task_results(pk, override=False):
      task.save()
      
      try:
-          task_info = json.loads(task.task.replace("'","\""))
-          paths = []
-          for doc in ags_docs:
-               paths.append(doc.document.path)
+          if (task.task):
+               task_info = json.loads(task.task.replace("'","\""))
           
-          if 'processAGS' in task_info['actions'] and len(paths) > 0 :
-               ap = processAGS (paths)
-               ap.process()
+               paths = []
+               for doc in ags_docs:
+                    paths.append(doc.document.path)
                
-               if 'ags_summary' in task_info['results']:
-                    result = ap.report_summary ()
-                    content = ContentFile (content=result, name="ags_summary.csv" )
-                    file = AGSDocuments.objects.create(task=task, document=content)
-                    file.save() 
-                    task.progress_add('report summary created:' + file.document.name)
-                    task.save()
-               if 'ags_lines' in task_info['results']:
-                    result = ap.report_lines ()
-                    content = ContentFile (content=result, name="ags_lines.csv" )
-                    file = AGSDocuments.objects.create(task=task, document=content)
-                    file.save() 
-                    task.progress_add('report lines created:' + file.document.name)
-                    task.save()
-          
-          
-          task.files =  get_task_files(task.id)
-          task.completedDT = datetime.now(pytz.UTC)
-          task.progress_add ("get_task_results() completed")
-          task.status = Status.SUCCESS
-          task.save()
+               if 'processAGS' in task_info['actions'] and len(paths) > 0 :
+                    ap = processAGS (paths)
+                    ap.process()
+                    
+                    if 'ags_summary' in task_info['results']:
+                         result = ap.report_summary ()
+                         content = ContentFile (content=result, name="ags_summary.csv" )
+                         file = AGSDocuments.objects.create(task=task, document=content)
+                         file.save() 
+                         task.progress_add('report summary created:' + file.document.name)
+                         task.save()
+                    if 'ags_lines' in task_info['results']:
+                         result = ap.report_lines ()
+                         content = ContentFile (content=result, name="ags_lines.csv" )
+                         file = AGSDocuments.objects.create(task=task, document=content)
+                         file.save() 
+                         task.progress_add('report lines created:' + file.document.name)
+                         task.save()
+               
+               
+               task.files =  get_task_files(task.id)
+               task.completedDT = datetime.now(pytz.UTC)
+               task.progress_add ("get_task_results() completed")
+               task.status = Status.SUCCESS
+               task.save()
           
               
      except Exception as e:

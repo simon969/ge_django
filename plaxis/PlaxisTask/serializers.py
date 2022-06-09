@@ -1,6 +1,7 @@
 from datetime import datetime
 import pytz
 
+
 # # https://www.django-rest-framework.org/tutorial/1-serialization
 
 from rest_framework import serializers
@@ -54,6 +55,7 @@ class PlaxisTaskSerializerCreate(serializers.ModelSerializer):
     class Meta:
         model = PlaxisTask
         fields = ['id', 'conn', 'query', 'owner','createdDT']
+       
     def create(self, validated_data):
         """
         Create and return a new `Plaxis` instance, given the validated data.

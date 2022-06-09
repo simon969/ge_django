@@ -1,7 +1,7 @@
 import threading
 import os
 from datetime import datetime
-
+import json
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -15,7 +15,7 @@ from rest_framework import generics
 
 from ge_py.quickstart.models import NOT_INTEGER, get_integer
 
-from plaxis.PlaxisTask.models import PlaxisTask, PlaxisDocuments, get_task_results
+from plaxis.PlaxisTask.models import PlaxisTask, PlaxisDocuments, get_task_results, any_task_connected
 from plaxis.PlaxisTask.serializers import PlaxisTaskSerializerCreate
 from plaxis.PlaxisTask.serializers import PlaxisTaskSerializer
 
@@ -89,15 +89,24 @@ class PlaxisViewSet(ModelViewSet):
         """
         if request.method == 'POST':
             data = JSONParser().parse(request)
-            serializer = PlaxisTaskSerializerCreate(data)
-            task = serializer.create(data)
-            self.start_task (request, task.id)
-
-            serializer2 = PlaxisTaskSerializer(task)
-            return JsonResponse(serializer2.data)
+            serializer = PlaxisTaskSerializerCreate(data=data)
+            if serializer.is_valid():
+                conn = json.loads(data['conn'].replace("'","\""))
+                host = conn["host"]
+                port = conn["port"]
+                if (any_task_connected(host, port)):
+                    msg  = "Unable to create new ge_task, host({1}) on port({2}) is currently in use by another task".format(host, port)
+                    return JsonResponse({'message': msg}, status=409)
+                else:
+                    task = serializer.create(data)
+                    self.start_task (request, task.id)
+                    return JsonResponse(serializer.data)
+            else:
+                return JsonResponse(serializer.errors, status=400)
     
     @action(detail=True, methods=['get'])
     def download(self, request, *args, **kwargs):
+
         """
         Download the results of a Plaxis task  
         if 'element' is in kwargs and its an integer its used directly for the records in the PlaxisDocuments associated with the PlaxisTask, 
@@ -147,7 +156,7 @@ class PlaxisViewSet(ModelViewSet):
                 return response
         except:
             return HttpResponse(status=404)
-
+    
     @action(detail=True, methods=['get'])
     def start_task(self, request, pk):
         """
