@@ -1,12 +1,12 @@
 from datetime import datetime
 import pytz
-
+import json
 
 # # https://www.django-rest-framework.org/tutorial/1-serialization
 
 from rest_framework import serializers
 
-from plaxis.PlaxisTask.models import PlaxisTask, LANGUAGE_CHOICES, STYLE_CHOICES
+from plaxis.PlaxisTask.models import PlaxisTask, LANGUAGE_CHOICES, STYLE_CHOICES, any_task_connected
 
 # Manually assign serializer fields
 class PlaxisTaskSerializer(serializers.Serializer):
@@ -69,3 +69,14 @@ class PlaxisTaskSerializerCreate(serializers.ModelSerializer):
         )
         task.save()
         return task
+    def is_available(self, validated_data):
+                conn = json.loads(validated_data['conn'].replace("'","\""))
+                host = conn["host"]
+                port = conn["port"]
+                return not any_task_connected(host, port)
+    
+                #     msg  = "Unable to create new ge_task, host({0}) on port({1}) is currently in use by another task".format(host, port)
+                #     return JsonResponse({'message': msg}, status=409)
+                # else:
+    
+     

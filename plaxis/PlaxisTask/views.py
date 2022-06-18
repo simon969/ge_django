@@ -44,7 +44,8 @@ class PlaxisViewSet(ModelViewSet):
         if owner is not None:
             queryset = queryset.filter(owner=owner)
         
-        return queryset
+        return queryset.order_by('-createdDT')
+
     @csrf_exempt
     def list(self, request):
         """
@@ -90,17 +91,14 @@ class PlaxisViewSet(ModelViewSet):
         if request.method == 'POST':
             data = JSONParser().parse(request)
             serializer = PlaxisTaskSerializerCreate(data=data)
-            if serializer.is_valid():
-                conn = json.loads(data['conn'].replace("'","\""))
-                host = conn["host"]
-                port = conn["port"]
-                if (any_task_connected(host, port)):
-                    msg  = "Unable to create new ge_task, host({1}) on port({2}) is currently in use by another task".format(host, port)
-                    return JsonResponse({'message': msg}, status=409)
-                else:
+            if serializer.is_valid(): 
+                if serializer.is_available(data):
                     task = serializer.create(data)
-                    self.start_task (request, task.id)
-                    return JsonResponse(serializer.data)
+                    if (task):
+                        return self.start_task (request, task.id)
+                else:
+                    msg  = "Unable to create new ge_task host is currently in use by another task"
+                    return JsonResponse({'message': msg}, status=409)    
             else:
                 return JsonResponse(serializer.errors, status=400)
     
@@ -165,16 +163,17 @@ class PlaxisViewSet(ModelViewSet):
         """
         try:
             task = PlaxisTask.objects.get(pk=pk)
+            serializer = PlaxisTaskSerializer(task)
+            t = threading.Thread(target=get_task_results,args=[pk])
+            t.setDaemon(True)
+            t.start()
+            return  JsonResponse(data = serializer.data, 
+                                status=status.HTTP_202_ACCEPTED)
+
         except PlaxisTask.DoesNotExist:
             return HttpResponse(status=404) 
 
-        serializer = PlaxisTaskSerializer(task)
-        
-        t = threading.Thread(target=get_task_results,args=[pk])
-        t.setDaemon(True)
-        t.start()
-    
-        return  JsonResponse(data= serializer.data, status=status.HTTP_202_ACCEPTED)
+       
 
 class PlaxisOwnerList(generics.ListAPIView):
     serializer_class = PlaxisTaskSerializer

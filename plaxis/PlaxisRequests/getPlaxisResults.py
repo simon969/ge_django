@@ -136,15 +136,14 @@ class PlaxisScripting (object):
                 self.s_o, self.g_o = new_server(host, port, password='')
             else:
                 self.s_o, self.g_o = new_server(host, port, password=password)
-            print ('Connected:', host, port, self.s_o.name, self.s_o.major_version, self.s_o.minor_version, 'Is2d=', self.s_o.is_2d, 'Is3d=', self.s_o.is_3d)
         else:
             self.g_o = server
-            print ('Connected:', self.g_o)
         
-        if (self.g_o == None):
+        if (self.s_o.is_2d is False and self.s_o.is_3d is False ):
             print ('..no connection')     
             raise ValueError("Not Connected")
-                
+        else:
+            print ('Connected:', host, port, self.s_o.name, self.s_o.major_version, self.s_o.minor_version, 'Is2d=', self.s_o.is_2d, 'Is3d=', self.s_o.is_3d)        
 
         self.NodeList = []
     def match(self, **kwargs):

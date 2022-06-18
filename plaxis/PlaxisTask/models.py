@@ -52,7 +52,9 @@ class PlaxisTask (models.Model):
     class Meta:
       ordering = ['createdDT']
     def progress_add (self, msg):
-        self.progress += "{0}:{1}".format(datetime.now(), msg + '/n')
+        if (msg is None):
+            return
+        self.progress += "{0}:{1}".format(datetime.now(), msg + '/r/n')
 
 class PlaxisDocuments (models.Model):
     id = models.UUIDField(
@@ -105,10 +107,6 @@ def get_task_results(pk):
     except PlaxisTask.DoesNotExist:
         return 
 
-    task.progress_add ("get_task_results() started")
-    task.status = Status.PROCESSING
-    task.save()
-
     try:
       
         query = json.loads(task.query.replace("'","\""))
@@ -125,6 +123,10 @@ def get_task_results(pk):
             task.is_connected = False
             task.save()
             return
+        
+        task.progress_add ("get_task_results() started")
+        task.status = Status.PROCESSING
+        task.save()
 
         password = conn["password"]
         filename =  query.get("filename")
@@ -137,16 +139,19 @@ def get_task_results(pk):
         filename = filename.replace("%random",rand)
         filename = filename.replace("%host",host)
         filename = filename.replace("%datetime", dt_now.strftime("%Y%m%d%H%M%S"))
-            
-        if (version == 'Plaxis2dConnectV2'):
-            pr = Plaxis2dResultsConnectV2 (host=host, port=port, password=password)
-        if (version == 'Plaxis2dConnect'):
-            pr = Plaxis2dResultsConnectV2 (host=host, port=port, password=password)
-        if (version == 'Plaxis3dConnect'):
-            pr = Plaxis3dResultsConnect (host=host, port=port, password=password)
-        
+
+        try:
+            if (version == 'Plaxis2dConnectV2'):
+                pr = Plaxis2dResultsConnectV2 (host=host, port=port, password=password)
+            if (version == 'Plaxis2dConnect'):
+                pr = Plaxis2dResultsConnectV2 (host=host, port=port, password=password)
+            if (version == 'Plaxis3dConnect'):
+                pr = Plaxis3dResultsConnect (host=host, port=port, password=password)
+        except (TypeError, ValueError):
+            pr = None
+
         if pr is None:
-            task.progress_add (version + " is an incompatable plaxis version")
+            task.progress_add (version + " unable to connect ")
             task.status = Status.READY
             task.is_connected = False
             task.save()
@@ -174,7 +179,7 @@ def get_task_results(pk):
                             sphaseStart=None,
                             sphaseEnd=None
                             )
-                task.progress += "{0}:{1}".format(datetime.now(), result)
+                task.progress_add("Plate results retrieved")
                 task.save()
                 element_done = True
         
@@ -187,7 +192,7 @@ def get_task_results(pk):
                             sphaseStart=None,
                             sphaseEnd=None
                             )
-                task.progress += "{0}:{1}".format(datetime.now(), result)
+                task.progress_add("EmbeddedBeam results retrieved")
                 task.save()
                 element_done = True
             
@@ -201,7 +206,7 @@ def get_task_results(pk):
                             sphaseEnd=None
                             )
                         
-                task.progress += "{0}:{1}".format(datetime.now(), result)
+                task.progress_add("Interfaces results retrieved")
                 task.save()
                 element_done = True
             
@@ -215,7 +220,7 @@ def get_task_results(pk):
                             sphaseEnd=None
                             )
                         
-                task.progress += "{0}:{1}".format(datetime.now(), result)
+                task.progress_add("FixedEndAnchor results retrieved")
                 task.save()
                 element_done = True
             
@@ -228,7 +233,7 @@ def get_task_results(pk):
                             sphaseStart=None,
                             sphaseEnd=None
                             )
-                task.progress += "{0}:{1}".format(datetime.now(),result)
+                task.progress_add("NodeToNodeAnchor results retrieved")
                 task.save()
                 element_done = True
             
@@ -241,7 +246,7 @@ def get_task_results(pk):
                             sphaseStart=None,
                             sphaseEnd=None
                             )
-                task.progress += "{0}:{1}".format(datetime.now(),result)
+                task.progress_add("SoilResultsByPoints retrieved")
                 task.save()
                 element_done = True
             
@@ -256,7 +261,7 @@ def get_task_results(pk):
                             xMin=None, xMax=None,
                             yMin=None, yMax=None,
                             )
-                task.progress += "{0}:{1}".format(datetime.now(), result)
+                task.progress_add ("SoilResultsByRanges retrieved")
                 task.save()
                 element_done = True
             
@@ -272,19 +277,19 @@ def get_task_results(pk):
                             )
                         
                 results.append (result)
-                task.progress += "{0}:{1}".format(datetime.now(),result)
+                task.progress_add ("InterfaceResultsByPointsByStep retrieved")
                 task.save()
                 element_done = True
             
             if (element_done == False):
                 results.append (element + " not found")
-                task.progress += "{0}:{1}".format(datetime.now(), element + " results not retrieved")
+                task.progress_add (element + " results not retrieved")
                 task.save()
 
         task.files =  get_task_files(task.id)
         task.completedDT = datetime.now(pytz.UTC)
         task.is_connected = False
-        task.progress += "{0}:{1}".format(datetime.now(), "get_task_results() completed")
+        task.progress_add ("get_task_results() completed")
         task.status = Status.READY
         task.save()
         return
